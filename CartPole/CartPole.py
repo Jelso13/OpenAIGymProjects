@@ -24,6 +24,7 @@ NUM_ACTIONS = env.action_space.n # (left, right)
 #   velocity given by radians (+-1 radians per timestep ~ +-60 degrees per timestep)
 ENV_TEMPLATE = [[env.observation_space.low[2], env.observation_space.high[2]], [-1, 1]]
 EXPLORE_RATE = 1.0
+DECAY_FUN = lambda minV, run, div :  max(minV, min(1, 1.0 - np.log10((run + 1) / div)))
 LEARNING_RATE = 1.0
 DISCOUNT = 0.95
 # create qTable with zeros for each env parameter being used in combination with each possible action
@@ -49,8 +50,8 @@ def selectAction(state, EXPLORE_RATE):
         return np.argmax(QTable[state])
 
 debugOn = True
-run_number = 0
-best_timesteps = 0
+run_number = 0 # log how many runs have been completed
+best_timesteps = 0 # logs the best timestep achieved so far
 while True:
     run_number += 1
     #reset env
@@ -62,19 +63,20 @@ while True:
     done = False
     timeSteps = 0
     # decay the rate at which random exploration is made from 1.0 to 0.01
-    EXPLORE_RATE = max(1/(1+run_number/10), 0.001)
+    EXPLORE_RATE = DECAY_FUN(0.01, run_number, 25)
     # decay the learning rate from 1.0 to 0.1 for each run
-    LEARNING_RATE = max(1/(1+run_number/100),0.1)
+    LEARNING_RATE = max(1/(1+run_number/10),0.1)
     # while the pole hasnt fallen or 199 timesteps reached (determined by gym)
     while not done:
         timeSteps+=1
-        if run_number % 10 == 0: # show the result every 50 runs
+        if run_number % 10 == 0: # show the result every 10 runs
             env.render()
         #select action
         action = selectAction(discreteState, EXPLORE_RATE)
+        # get the observations from the environment after the action is completed on the environment
         observation, reward, done, info = env.step(action)
-        newDiscreteState = toDiscreteEnv(observation)
-        topPredictQ = np.max(QTable[newDiscreteState])
+        newDiscreteState = toDiscreteEnv(observation) # discrete version of the environ
+        topPredictQ = np.max(QTable[newDiscreteState]) # best prediction of q value
         QTable[discreteState][action] = (1-LEARNING_RATE) * QTable[discreteState][action] + LEARNING_RATE * (reward + DISCOUNT * topPredictQ)
         discreteState = newDiscreteState
         totalReward += reward

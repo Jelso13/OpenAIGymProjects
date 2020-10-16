@@ -1,0 +1,5 @@
+Possible improvements
+ToDo:
+    include the cart position in the q_table so that it tries not to go off the edge
+    change learning rate and explore rate functions
+    render only the best run of a set of 50 (maybe store environment seed and copy of q_table and rerun?)
